@@ -62,19 +62,32 @@ func main() {
 		log.Fatal(err)
 	}
 	app := fiber.New()
+
+	// Define a route for handling GET requests to "/employee".
 	app.Get("/employee", func(c *fiber.Ctx) error {
+		// Define an empty BSON document to query all documents in the "employees" collection.
 		query := bson.D{{}}
+
+		// Execute the query on the MongoDB server to retrieve all documents in the "employees" collection.
 		cursor, err := mg.Db.Collection("employees").Find(c.Context(), query)
 		if err != nil {
+			// If an error occurs during the query, return a 500 Internal Server Error with the error message.
 			return c.Status(500).SendString(err.Error())
 		}
-		var employees []Employee = make([]Employee, 0)
-		if err := cursor.All(c.Context(), &employees); err != nil {
-			return c.Status(500).SendString(err.Error())
-		}
-		return c.JSON(employees)
 
+		// Create a slice to store the retrieved employee documents.
+		var employees []Employee = make([]Employee, 0)
+
+		// Decode all documents from the cursor and store them in the "employees" slice.
+		if err := cursor.All(c.Context(), &employees); err != nil {
+			// If an error occurs during decoding, return a 500 Internal Server Error with the error message.
+			return c.Status(500).SendString(err.Error())
+		}
+
+		// Return the retrieved employee documents as a JSON response.
+		return c.JSON(employees)
 	})
+
 	app.Post("/employee")
 	app.Put("/employee/:id")
 
