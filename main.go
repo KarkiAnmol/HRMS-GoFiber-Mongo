@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -21,7 +22,7 @@ const dbName = "fiber-hrms"
 const mongoURI = "mongodb://localhost:27017" + dbName
 
 type Employee struct {
-	ID     string  `json:"id"`
+	ID     string  `json:"id,omitempty" bson:"_id,omitempty"`
 	Name   string  `json:"name"`
 	Salary float64 `json:"salary"`
 	Age    int     `json:"age"`
@@ -62,6 +63,17 @@ func main() {
 	}
 	app := fiber.New()
 	app.Get("/employee", func(c *fiber.Ctx) error {
+		query := bson.D{{}}
+		cursor, err := mg.Db.Collection("employees").Find(c.Context(), query)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		var employees []Employee = make([]Employee, 0)
+		if err := cursor.All(c.Context(), &employees); err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		return c.JSON(employees)
+
 	})
 	app.Post("/employee")
 	app.Put("/employee/:id")
