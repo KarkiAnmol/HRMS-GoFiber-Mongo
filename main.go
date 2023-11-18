@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -9,8 +11,8 @@ import (
 )
 
 type MongoInstance struct {
-	Client
-	Db
+	Client *mongo.Client
+	Db     *mongo.Database
 }
 
 var mg MongoInstance
@@ -25,8 +27,32 @@ type Employee struct {
 	Age    int     `json:"age"`
 }
 
-func connectDB(c *fiber.Ctx) error {
-	client, err := mongo.Connect(options.Client().ApplyURI(mongoURI))
+// connectDB establishes a connection to the MongoDB server.
+// It returns an error if the connection cannot be established.
+func connectDB() error {
+	// Set a timeout for the database connection attempt.
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+
+	// Connect to the MongoDB server using the provided URI.
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		// If an error occurs during connection, return the error.
+		return err
+	}
+	// Ensure the context is canceled when the function exits.
+	defer cancel()
+
+	// Select the specific database from the connected MongoDB server.
+	db := client.Database(dbName)
+
+	// Store the MongoDB client and selected database in a global variable.
+	// This allows other parts of the program to access the same MongoDB instance.
+	mg = MongoInstance{
+		Client: client,
+		Db:     db,
+	}
+
+	// Connection successful, return nil (no error).
 	return nil
 }
 
